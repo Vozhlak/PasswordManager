@@ -1,8 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
+)
+
+const (
+	ErrorLessThanEightCharacters = "password is too weak"
 )
 
 type Password struct {
@@ -36,6 +41,21 @@ func NewPasswordManager(filePath string) *PasswordManager {
 		filePath:      filePath,
 		isInitialized: false,
 	}
+}
+
+func (pm *PasswordManager) SetMasterPassword(masterPassword string) error {
+	if len(masterPassword) < 8 {
+		return errors.New(ErrorLessThanEightCharacters)
+	}
+
+	buffKey := make([]byte, 32)
+
+	copy(buffKey, []byte(masterPassword))
+
+	pm.masterKey = buffKey
+	pm.isInitialized = true
+
+	return nil
 }
 
 func main() {
