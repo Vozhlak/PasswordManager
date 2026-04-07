@@ -24,18 +24,17 @@ func NewPassword(name, value, category string) Password {
 }
 
 type PasswordManager struct {
-	Passwords     map[string]Password `json:"passwords"`
-	Key           string              `json:"key"`
-	MasterKey     []byte              `json:"-"`
-	FilePath      string              `json:"-"`
-	IsInitialized bool                `json:"-"`
+	passwords     map[string]Password `json:"passwords"`
+	masterKey     []byte              `json:"-"`
+	filePath      string              `json:"-"`
+	isInitialized bool                `json:"-"`
 }
 
 func NewPasswordManager(filePath string) *PasswordManager {
 	return &PasswordManager{
-		Passwords:     make(map[string]Password),
-		FilePath:      filePath,
-		IsInitialized: false,
+		passwords:     make(map[string]Password),
+		filePath:      filePath,
+		isInitialized: false,
 	}
 }
 
