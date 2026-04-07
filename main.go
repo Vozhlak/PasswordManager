@@ -23,6 +23,22 @@ func NewPassword(name, value, category string) Password {
 	}
 }
 
+type PasswordManager struct {
+	Passwords     map[string]Password `json:"passwords"`
+	Key           string              `json:"key"`
+	MasterKey     []byte              `json:"-"`
+	FilePath      string              `json:"-"`
+	IsInitialized bool                `json:"-"`
+}
+
+func NewPasswordManager(filePath string) *PasswordManager {
+	return &PasswordManager{
+		Passwords:     make(map[string]Password),
+		FilePath:      filePath,
+		IsInitialized: false,
+	}
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 
