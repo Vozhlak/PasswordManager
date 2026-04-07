@@ -7,7 +7,9 @@ import (
 )
 
 const (
-	ErrorLessThanEightCharacters = "password is too weak"
+	ErrLessThanEightCharacters       = "password is too weak"
+	ErrPasswordManagerNotInitialized = "password manager not initialized"
+	ErrPasswordAlreadyExists         = "password already exists"
 )
 
 type Password struct {
@@ -45,7 +47,7 @@ func NewPasswordManager(filePath string) *PasswordManager {
 
 func (pm *PasswordManager) SetMasterPassword(masterPassword string) error {
 	if len(masterPassword) < 8 {
-		return errors.New(ErrorLessThanEightCharacters)
+		return errors.New(ErrLessThanEightCharacters)
 	}
 
 	buffKey := make([]byte, 32)
@@ -58,9 +60,23 @@ func (pm *PasswordManager) SetMasterPassword(masterPassword string) error {
 	return nil
 }
 
+func (pm *PasswordManager) SavePassword(name, value, category string) error {
+	if !pm.isInitialized {
+		return errors.New(ErrPasswordManagerNotInitialized)
+	}
+
+	_, exists := pm.passwords[name]
+	if exists {
+		return errors.New(ErrPasswordAlreadyExists)
+	}
+
+	createdPassword := NewPassword(name, value, category)
+
+	pm.passwords[name] = createdPassword
+
+	return nil
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
-
-	password := NewPassword("github.com", "superSecretPassword123", "development")
-	fmt.Println(password)
 }
