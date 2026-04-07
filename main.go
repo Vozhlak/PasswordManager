@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"time"
@@ -99,6 +100,29 @@ func (pm *PasswordManager) ListPasswords() []Password {
 	}
 
 	return passwords
+}
+
+func (pm *PasswordManager) GeneratePassword(length int) (string, error) {
+	if length < 8 {
+		return "", errors.New(ErrLessThanEightCharacters)
+	}
+
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+{}|;:'\",.<>?`~"
+	randomBytes := make([]byte, length)
+
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", err
+	}
+
+	password := make([]byte, length)
+	charsetLen := byte(len(charset))
+
+	for i := 0; i < length; i++ {
+		password[i] = charset[randomBytes[i]%charsetLen]
+	}
+
+	return string(password), nil
 }
 
 func main() {
