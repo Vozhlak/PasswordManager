@@ -10,6 +10,7 @@ const (
 	ErrLessThanEightCharacters       = "password is too weak"
 	ErrPasswordManagerNotInitialized = "password manager not initialized"
 	ErrPasswordAlreadyExists         = "password already exists"
+	ErrPasswordNotFound              = "password not found"
 )
 
 type Password struct {
@@ -75,6 +76,19 @@ func (pm *PasswordManager) SavePassword(name, value, category string) error {
 	pm.passwords[name] = createdPassword
 
 	return nil
+}
+
+func (pm *PasswordManager) GetPassword(name string) (Password, error) {
+	if !pm.isInitialized {
+		return Password{}, errors.New(ErrPasswordManagerNotInitialized)
+	}
+
+	password, exists := pm.passwords[name]
+	if !exists {
+		return Password{}, errors.New(ErrPasswordNotFound)
+	}
+
+	return password, nil
 }
 
 func main() {
