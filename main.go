@@ -1,9 +1,14 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"time"
 )
 
@@ -123,6 +128,52 @@ func (pm *PasswordManager) GeneratePassword(length int) (string, error) {
 	}
 
 	return string(password), nil
+}
+
+func (pm *PasswordManager) SaveToFile() error {
+	if !pm.isInitialized {
+		return errors.New(ErrPasswordManagerNotInitialized)
+	}
+
+	data, err := json.Marshal(pm.passwords)
+	if err != nil {
+		return fmt.Errorf("error encode data: %w", err)
+	}
+
+	block, err := aes.NewCipher(pm.masterKey)
+	if err != nil {
+		return fmt.Errorf("error create cipher: %w", err)
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return fmt.Errorf("error create gcm: %w", err)
+	}
+
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return fmt.Errorf("error readFull nonce: %w", err)
+	}
+
+	cipherText := aesgcm.Seal(nil, nonce, data, nil)
+
+	file, err := os.Create(pm.filePath)
+	if err != nil {
+		return fmt.Errorf("error create file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(nonce)
+	if err != nil {
+		return fmt.Errorf("error write nonce: %w", err)
+	}
+
+	_, err = file.Write(cipherText)
+	if err != nil {
+		return fmt.Errorf("error write cipherText: %w", err)
+	}
+
+	return nil
 }
 
 func main() {
