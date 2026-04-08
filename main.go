@@ -176,6 +176,51 @@ func (pm *PasswordManager) SaveToFile() error {
 	return nil
 }
 
+func (pm *PasswordManager) LoadFromFile() error {
+	if !pm.isInitialized {
+		return errors.New(ErrPasswordManagerNotInitialized)
+	}
+
+	file, err := os.Open(pm.filePath)
+	if err != nil {
+		return fmt.Errorf("error open file: %w", err)
+	}
+	defer file.Close()
+
+	block, err := aes.NewCipher(pm.masterKey)
+	if err != nil {
+		return fmt.Errorf("error create cipher: %w", err)
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return fmt.Errorf("error create gcm: %w", err)
+	}
+
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err = io.ReadFull(file, nonce); err != nil {
+		return fmt.Errorf("error read nonce: %w", err)
+	}
+
+	encryptedData, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("error read encrypted data: %w", err)
+	}
+
+	decryptedData, err := aesgcm.Open(nil, nonce, encryptedData, nil)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt: invalid key or corrupted data: %w", err)
+	}
+
+	pm.passwords = make(map[string]Password)
+
+	if err = json.Unmarshal(decryptedData, &pm.passwords); err != nil {
+		return fmt.Errorf("error unmarshal decrypted data: %w", err)
+	}
+
+	return nil
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 }
