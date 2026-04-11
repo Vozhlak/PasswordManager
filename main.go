@@ -303,6 +303,28 @@ func (pm *PasswordManager) FindDuplicatePasswords() map[string][]string {
 	return duplicatedPasswords
 }
 
+func (pm *PasswordManager) UpdatePassword(name, newValue string) error {
+	if !pm.isInitialized {
+		return errors.New(ErrPasswordManagerNotInitialized)
+	}
+
+	password, err := pm.GetPassword(name)
+	if err != nil {
+		return err
+	}
+
+	if err = pm.CheckPasswordStrength(newValue); err != nil {
+		return err
+	}
+
+	password.Value = newValue
+	password.LastModified = time.Now()
+
+	pm.passwords[name] = password
+
+	return nil
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 }
