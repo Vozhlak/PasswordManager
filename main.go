@@ -287,6 +287,22 @@ func (pm *PasswordManager) GetPasswordsByCategory(category string) []Password {
 	return passwords
 }
 
+func (pm *PasswordManager) FindDuplicatePasswords() map[string][]string {
+	duplicatedPasswords := make(map[string][]string)
+
+	for _, p := range pm.passwords {
+		duplicatedPasswords[p.Value] = append(duplicatedPasswords[p.Value], p.Name)
+	}
+
+	for key, services := range duplicatedPasswords {
+		if len(services) <= 1 {
+			delete(duplicatedPasswords, key)
+		}
+	}
+
+	return duplicatedPasswords
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 }
