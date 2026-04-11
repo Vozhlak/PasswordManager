@@ -254,10 +254,6 @@ func (pm *PasswordManager) CheckPasswordStrength(password string) error {
 		}
 	}
 
-	if !hasUpper && !hasLower && !hasDigit && !hasSpecials {
-		return nil
-	}
-
 	var missing []string
 	if !hasUpper {
 		missing = append(missing, "uppercase letter")
