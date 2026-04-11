@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -18,6 +20,14 @@ const (
 	ErrPasswordAlreadyExists         = "password already exists"
 	ErrPasswordNotFound              = "password not found"
 )
+
+type PasswordValidationError struct {
+	Missing []string
+}
+
+func (e *PasswordValidationError) Error() string {
+	return fmt.Sprintf("password validation failed: missing %s", strings.Join(e.Missing, ", "))
+}
 
 type Password struct {
 	Name         string    `json:"name"`
@@ -216,6 +226,54 @@ func (pm *PasswordManager) LoadFromFile() error {
 
 	if err = json.Unmarshal(decryptedData, &pm.passwords); err != nil {
 		return fmt.Errorf("error unmarshal decrypted data: %w", err)
+	}
+
+	return nil
+}
+
+func (pm *PasswordManager) CheckPasswordStrength(password string) error {
+	if len([]rune(password)) < 8 {
+		return errors.New(ErrLessThanEightCharacters)
+	}
+
+	hasUpper, hasLower, hasDigit, hasSpecials := false, false, false, false
+	specials := "!@#$%^&*"
+
+	for _, r := range strings.Trim(password, " ") {
+		switch {
+		case unicode.IsSpace(r):
+			return errors.New("password must not contain spaces")
+		case unicode.IsUpper(r):
+			hasUpper = true
+		case unicode.IsLower(r):
+			hasLower = true
+		case unicode.IsDigit(r):
+			hasDigit = true
+		case strings.ContainsRune(specials, r):
+			hasSpecials = true
+		}
+	}
+
+	if !hasUpper && !hasLower && !hasDigit && !hasSpecials {
+		return nil
+	}
+
+	var missing []string
+	if !hasUpper {
+		missing = append(missing, "uppercase letter")
+	}
+	if !hasLower {
+		missing = append(missing, "lowercase letter")
+	}
+	if !hasDigit {
+		missing = append(missing, "digit")
+	}
+	if !hasSpecials {
+		missing = append(missing, "special symbol")
+	}
+
+	if len(missing) > 0 {
+		return &PasswordValidationError{Missing: missing}
 	}
 
 	return nil
