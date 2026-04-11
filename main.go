@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -338,6 +339,22 @@ func (pm *PasswordManager) DeletePassword(name string) error {
 	delete(pm.passwords, name)
 
 	return nil
+}
+
+func (pm *PasswordManager) ListCategories() []string {
+	set := make(map[string]bool)
+
+	for _, p := range pm.passwords {
+		set[p.Category] = true
+	}
+
+	categories := make([]string, 0, len(set))
+	for key := range set {
+		categories = append(categories, key)
+	}
+
+	sort.Strings(categories)
+	return categories
 }
 
 func main() {
