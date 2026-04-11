@@ -325,6 +325,21 @@ func (pm *PasswordManager) UpdatePassword(name, newValue string) error {
 	return nil
 }
 
+func (pm *PasswordManager) DeletePassword(name string) error {
+	if !pm.isInitialized {
+		return errors.New(ErrPasswordManagerNotInitialized)
+	}
+
+	_, err := pm.GetPassword(name)
+	if err != nil {
+		return err
+	}
+
+	delete(pm.passwords, name)
+
+	return nil
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 }
