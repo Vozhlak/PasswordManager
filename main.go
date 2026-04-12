@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -393,6 +394,39 @@ func (pm *PasswordManager) GetPasswordStats() map[string]interface{} {
 	stats["newest"] = newest
 
 	return stats
+}
+
+const (
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorReset  = "\033[0m"
+)
+
+func clearScreen() {
+	fmt.Print("\033[H\033[2J")
+}
+
+func showSuccess(message string) {
+	fmt.Printf("%s✓ Success: %s%s\n", colorGreen, message, colorReset)
+}
+
+func showError(message string) {
+	fmt.Printf("%s✗ Error: %s%s\n", colorRed, message, colorReset)
+}
+
+func showInfo(message string) {
+	fmt.Printf("%s→ Info: %s%s\n", colorYellow, message, colorReset)
+}
+
+func waitForEnter() error {
+	fmt.Print("\nНажмите Enter для продолжения...")
+
+	_, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read input: %w", err)
+	}
+	return nil
 }
 
 func main() {
