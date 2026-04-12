@@ -357,6 +357,44 @@ func (pm *PasswordManager) ListCategories() []string {
 	return categories
 }
 
+func (pm *PasswordManager) GetPasswordStats() map[string]interface{} {
+	stats := make(map[string]interface{})
+	stats["total"] = len(pm.passwords)
+
+	if len(pm.passwords) == 0 {
+		stats["categoryCount"] = map[string]int{}
+		stats["oldest"] = nil
+		stats["newest"] = nil
+		return stats
+	}
+
+	categoryCount := make(map[string]int)
+	var oldest, newest time.Time
+	first := true
+
+	for _, p := range pm.passwords {
+		categoryCount[p.Category]++
+
+		if first {
+			oldest, newest = p.CreatedAt, p.CreatedAt
+			first = false
+			continue
+		}
+		if p.CreatedAt.Before(oldest) {
+			oldest = p.CreatedAt
+		}
+		if p.CreatedAt.After(newest) {
+			newest = p.CreatedAt
+		}
+	}
+
+	stats["categoryCount"] = categoryCount
+	stats["oldest"] = oldest
+	stats["newest"] = newest
+
+	return stats
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 }
