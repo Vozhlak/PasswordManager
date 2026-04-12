@@ -419,14 +419,14 @@ func showInfo(message string) {
 	fmt.Printf("%s→ Info: %s%s\n", colorYellow, message, colorReset)
 }
 
-func waitForEnter() error {
+func waitForEnter() {
 	fmt.Print("\nНажмите Enter для продолжения...")
 
 	_, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
-		return fmt.Errorf("failed to read input: %w", err)
+		fmt.Printf("failed to read input: %w", err)
+		return
 	}
-	return nil
 }
 
 func main() {
