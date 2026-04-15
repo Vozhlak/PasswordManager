@@ -12,7 +12,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 	"time"
 	"unicode"
 
@@ -492,19 +491,17 @@ func PrintPasswordList(passwords []Password) {
 		return
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 16, ' ', tabwriter.TabIndent)
-	fmt.Fprintln(w, "Name\tCategory\tCreated\tLast Modified")
-	fmt.Fprintln(w, strings.Repeat("_", 90))
+	fmt.Printf("%-25s %-15s %-12s %-12s\n", "Name", "Category", "Created", "Last Modified")
+	fmt.Println(strings.Repeat("-", 70))
 
 	for _, p := range passwords {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+		fmt.Printf("%-25s %-15s %-12s %-12s\n",
 			p.Name,
 			p.Category,
 			p.CreatedAt.Format(time.DateOnly),
 			p.LastModified.Format(time.DateOnly),
 		)
 	}
-	w.Flush()
 }
 
 func ShowPasswordDetails(password Password) {
