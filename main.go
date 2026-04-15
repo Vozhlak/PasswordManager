@@ -12,6 +12,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"time"
 	"unicode"
 
@@ -452,6 +453,67 @@ func readPassword() (string, error) {
 	}
 
 	return string(password), nil
+}
+
+func ShowMainMenu() {
+	clearScreen()
+
+	separator := strings.Repeat("=", 50)
+	fmt.Println(separator)
+	fmt.Printf("%30s\n", "Password Manager")
+	fmt.Println(separator)
+
+	commands := []string{
+		"Generate new password",
+		"Add new password",
+		"Get password",
+		"List all passwords",
+		"Update password",
+		"Delete password",
+		"List categories",
+		"Show password statistics",
+		"Find duplicate passwords",
+	}
+
+	for i, cmd := range commands {
+		fmt.Printf("%d. %s\n", i+1, cmd)
+	}
+
+	fmt.Println("0. Exit")
+
+	fmt.Println(separator)
+}
+
+func PrintPasswordList(passwords []Password) {
+	fmt.Println("=== Password list ===")
+
+	if len(passwords) == 0 {
+		fmt.Println("ℹ️  No passwords found. Add one to get started!")
+		return
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 16, ' ', tabwriter.TabIndent)
+	fmt.Fprintln(w, "Name\tCategory\tCreated\tLast Modified")
+	fmt.Fprintln(w, strings.Repeat("_", 90))
+
+	for _, p := range passwords {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			p.Name,
+			p.Category,
+			p.CreatedAt.Format(time.DateOnly),
+			p.LastModified.Format(time.DateOnly),
+		)
+	}
+	w.Flush()
+}
+
+func ShowPasswordDetails(password Password) {
+	fmt.Println("=== Password details ===")
+	fmt.Println("Service:", password.Name)
+	fmt.Println("Category:", password.Category)
+	fmt.Println("Password:", password.Value)
+	fmt.Println("Created:", password.CreatedAt.Format(time.DateTime))
+	fmt.Println("Last Modified:", password.LastModified.Format(time.DateTime))
 }
 
 func main() {
