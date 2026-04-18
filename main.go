@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -511,6 +512,167 @@ func ShowPasswordDetails(password Password) {
 	fmt.Println("Password:", password.Value)
 	fmt.Println("Created:", password.CreatedAt.Format(time.DateTime))
 	fmt.Println("Last Modified:", password.LastModified.Format(time.DateTime))
+}
+
+func readLine(scanner *bufio.Scanner, prompt string) (string, error) {
+	if prompt != "" {
+		fmt.Print(prompt)
+	}
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return "", fmt.Errorf("stdin read error: %w", err)
+		}
+
+		return "", io.EOF
+	}
+	return strings.TrimSpace(scanner.Text()), nil
+}
+
+func HandlePasswordGeneration(pm *PasswordManager) error {
+	clearScreen()
+
+	fmt.Println("=== Password Generation ===")
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	line, err := readLine(scanner, "Enter password length (min 8): ")
+	if err != nil {
+		return err
+	}
+	if line == "" {
+		return errors.New("the field is empty")
+	}
+
+	val, err := strconv.Atoi(line)
+	if err != nil {
+		return fmt.Errorf("invalid number format: %w", err)
+	}
+
+	generatedPassword, err := pm.GeneratePassword(val)
+	if err != nil {
+		return fmt.Errorf("password generation failed: %w", err)
+	}
+
+	showSuccess("Password generated successfully")
+	fmt.Println("Generated password: ", generatedPassword)
+	waitForEnter()
+
+	return nil
+}
+
+func HandlePasswordAdd(pm *PasswordManager) error {
+	clearScreen()
+	password := ""
+
+	fmt.Println("=== Add New Password ===")
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	serviceName, err := readLine(scanner, "Enter service name: ")
+	if err != nil {
+		return err
+	}
+	if serviceName == "" {
+		return errors.New("service name cannot be empty")
+	}
+
+	enteredPassword, err := readLine(scanner, "Enter password (or press Enter to generate): ")
+	if err != nil {
+		return err
+	}
+	if enteredPassword == "" {
+		generatedPassword, err := pm.GeneratePassword(16)
+		if err != nil {
+			return fmt.Errorf("generate password error: %w", err)
+		}
+
+		password = generatedPassword
+		showInfo(fmt.Sprintf("Generated password: %s", password))
+	} else {
+		if err := pm.CheckPasswordStrength(enteredPassword); err != nil {
+			return fmt.Errorf("check password error: %w", err)
+		}
+		password = enteredPassword
+	}
+
+	category, err := readLine(scanner, "Enter category: ")
+	if err != nil {
+		return err
+	}
+	if category == "" {
+		return errors.New("field category cannot be empty")
+	}
+
+	if err = pm.SavePassword(serviceName, password, category); err != nil {
+		return err
+	}
+
+	showSuccess("Password saved successfully")
+
+	waitForEnter()
+
+	return nil
+}
+
+func HandlePasswordSearch(pm *PasswordManager) error {
+	clearScreen()
+
+	fmt.Println("=== Search Password ===")
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	serviceName, err := readLine(scanner, "Enter service name: ")
+	if err != nil {
+		return err
+	}
+	if serviceName == "" {
+		return errors.New("service name cannot be empty")
+	}
+
+	password, err := pm.GetPassword(serviceName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+	ShowPasswordDetails(password)
+	waitForEnter()
+
+	return nil
+}
+
+func HandlePasswordUpdate(pm *PasswordManager) error {
+	clearScreen()
+
+	fmt.Println("=== Update Password ===")
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	serviceName, err := readLine(scanner, "Enter service name: ")
+	if err != nil {
+		return err
+	}
+	if serviceName == "" {
+		return errors.New("service name cannot be empty")
+	}
+
+	newPassword, err := readLine(scanner, "Enter new password: ")
+	if err != nil {
+		return err
+	}
+	if newPassword == "" {
+		return errors.New("new password cannot be empty")
+	}
+
+	if err = pm.UpdatePassword(serviceName, newPassword); err != nil {
+		return err
+	}
+
+	showSuccess("Password updated successfully")
+
+	waitForEnter()
+
+	return nil
 }
 
 func main() {
