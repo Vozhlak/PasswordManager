@@ -708,6 +708,174 @@ func HandleExitAndSave(pm *PasswordManager) error {
 	return nil
 }
 
+// handleLoadError обрабатывает ошибки загрузки файла и показывает понятное сообщение пользователю.
+// Возвращает true, если можно продолжить работу с пустым хранилищем.
+func handleLoadError(err error) bool {
+	if errors.Is(err, os.ErrNotExist) {
+		// Первый запуск — это нормально
+		showInfo("New profile created — password store is empty")
+		return true
+	}
+
+	// Анализируем тип ошибки для понятного сообщения
+	errMsg := err.Error()
+
+	switch {
+	case strings.Contains(errMsg, "message authentication failed"):
+		// ❗ Самая частая: неверный мастер-пароль
+		showError("Incorrect master password")
+		fmt.Printf("%sSaved data cannot be decrypted with this password.%s\n", colorYellow, colorReset)
+		fmt.Printf("%sTips:%s\n", colorYellow, colorReset)
+		fmt.Printf("  • Check if Caps Lock is on\n")
+		fmt.Printf("  • Try your previous master password\n")
+		fmt.Printf("  • If you forgot it, saved passwords cannot be recovered\n")
+		showInfo("Starting with empty password store. Use correct password next time to access saved data.")
+		return true
+
+	case strings.Contains(errMsg, "corrupted") || strings.Contains(errMsg, "invalid cipher"):
+		// Файл повреждён
+		showError("Password file is corrupted")
+		fmt.Printf("%sThe data file may be damaged or modified.%s\n", colorYellow, colorReset)
+		showInfo("Starting with empty password store. Restore from backup if available.")
+		return true
+
+	case strings.Contains(errMsg, "permission denied"):
+		// Нет прав доступа
+		showError("Cannot access password file")
+		fmt.Printf("%sCheck file permissions or disk space.%s\n", colorYellow, colorReset)
+		return false // Нельзя продолжить
+
+	default:
+		// Неизвестная ошибка — показываем техническую деталь для отладки
+		_ = failWithUI(err, "failed to load saved passwords")
+		return true // Продолжаем с пустым хранилищем
+	}
+}
+
 func main() {
-	fmt.Println("Happy coding!!!")
+	fmt.Println("=== Password Manager Initialization ===")
+	masterPassword, err := readPassword()
+	if err != nil {
+		_ = failWithUI(err, "failed to read master password")
+		return
+	}
+	if masterPassword == "" {
+		_ = failWithUI(nil, "master password cannot be empty")
+		return
+	}
+
+	pm := NewPasswordManager("passwords.dat")
+	if err = pm.SetMasterPassword(masterPassword); err != nil {
+		_ = failWithUI(err, "failed to set master password")
+		return
+	}
+
+	if err = pm.LoadFromFile(); err != nil {
+		if !handleLoadError(err) {
+			return
+		}
+	}
+
+	showSuccess("Password manager initialized successfully")
+	waitForEnter()
+
+	for {
+		ShowMainMenu()
+
+		choice := ReadUserInput("Enter your choice")
+
+		switch choice {
+		case "1":
+			err = HandlePasswordGeneration(pm)
+		case "2":
+			err = HandlePasswordAdd(pm)
+		case "3":
+			err = HandlePasswordSearch(pm)
+		case "4":
+			clearScreen()
+			PrintPasswordList(pm.ListPasswords())
+			waitForEnter()
+		case "5":
+			err = HandlePasswordUpdate(pm)
+		case "6":
+			name := ReadUserInput("Enter password name to delete")
+			if name != "" {
+				if err = pm.DeletePassword(name); err != nil {
+					_ = failWithUI(err, "delete password error")
+				} else {
+					showSuccess("Password deleted successfully")
+					waitForEnter()
+				}
+			}
+		case "7":
+			categories := pm.ListCategories()
+			clearScreen()
+
+			fmt.Println("=== Categories ===")
+			for _, c := range categories {
+				fmt.Printf("• %s\n", c)
+			}
+			waitForEnter()
+		case "8":
+			clearScreen()
+			fmt.Println("=== Password Statistics ===")
+
+			stats := pm.GetPasswordStats()
+			total, _ := stats["total"].(int)
+
+			if total == 0 {
+				fmt.Println("ℹ️  No passwords saved yet. Statistics will appear here once you add some.")
+			} else {
+				fmt.Printf("%sTotal passwords:%s %d\n\n", colorGreen, colorReset, total)
+
+				if catMap, ok := stats["categoryCount"].(map[string]int); ok && len(catMap) > 0 {
+					fmt.Printf("%sPasswords by category:%s\n", colorYellow, colorReset)
+
+					var categories []string
+					for cat := range catMap {
+						categories = append(categories, cat)
+					}
+					sort.Strings(categories)
+
+					for _, cat := range categories {
+						count := catMap[cat]
+						fmt.Printf("  • %-15s %d\n", cat, count)
+					}
+					fmt.Println()
+				}
+
+				oldest, _ := stats["oldest"].(time.Time)
+				newest, _ := stats["newest"].(time.Time)
+
+				if !oldest.IsZero() || !newest.IsZero() {
+					fmt.Printf("%sActivity timeline:%s\n", colorYellow, colorReset)
+					fmt.Printf("  First added:  %s\n", oldest.Format(time.DateTime))
+					fmt.Printf("  Last added:   %s\n", newest.Format(time.DateTime))
+				}
+			}
+
+			waitForEnter()
+		case "9":
+			duplicates := pm.FindDuplicatePasswords()
+			clearScreen()
+			if len(duplicates) == 0 {
+				fmt.Println("No duplicate passwords found")
+			} else {
+				fmt.Println("=== Duplicate passwords ===")
+				for pwd, services := range duplicates {
+					fmt.Printf("Password '%s' used in: %v\n", pwd, services)
+				}
+			}
+			waitForEnter()
+		case "0":
+			if err = HandleExitAndSave(pm); err != nil {
+				showError(fmt.Sprintf("Failed to save: %v", err))
+			}
+			return
+		default:
+			showError("Invalid command, please try again")
+			waitForEnter()
+			continue
+		}
+	}
 }
