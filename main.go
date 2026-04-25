@@ -528,6 +528,22 @@ func readLine(scanner *bufio.Scanner, prompt string) (string, error) {
 	return strings.TrimSpace(scanner.Text()), nil
 }
 
+// failWithUI отображает ошибку через showError, ждёт ввода и возвращает ошибку.
+// Если err == nil, используется только сообщение msg.
+func failWithUI(err error, msg string) error {
+	if err != nil {
+		msg = fmt.Sprintf("%s: %v", msg, err)
+	}
+	showError(msg)
+	waitForEnter()
+
+	if err != nil {
+		return err
+	}
+
+	return errors.New(msg)
+}
+
 func HandlePasswordGeneration(pm *PasswordManager) error {
 	clearScreen()
 
@@ -537,20 +553,20 @@ func HandlePasswordGeneration(pm *PasswordManager) error {
 
 	line, err := readLine(scanner, "Enter password length (min 8): ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if line == "" {
-		return errors.New("the field is empty")
+		return failWithUI(nil, "the field is empty")
 	}
 
 	val, err := strconv.Atoi(line)
 	if err != nil {
-		return fmt.Errorf("invalid number format: %w", err)
+		return failWithUI(err, "invalid number format")
 	}
 
 	generatedPassword, err := pm.GeneratePassword(val)
 	if err != nil {
-		return fmt.Errorf("password generation failed: %w", err)
+		return failWithUI(err, "password generation failed")
 	}
 
 	showSuccess("Password generated successfully")
@@ -570,41 +586,41 @@ func HandlePasswordAdd(pm *PasswordManager) error {
 
 	serviceName, err := readLine(scanner, "Enter service name: ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if serviceName == "" {
-		return errors.New("service name cannot be empty")
+		return failWithUI(nil, "service name cannot be empty")
 	}
 
 	enteredPassword, err := readLine(scanner, "Enter password (or press Enter to generate): ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if enteredPassword == "" {
 		generatedPassword, err := pm.GeneratePassword(16)
 		if err != nil {
-			return fmt.Errorf("generate password error: %w", err)
+			return failWithUI(err, "generate password error")
 		}
 
 		password = generatedPassword
 		showInfo(fmt.Sprintf("Generated password: %s", password))
 	} else {
 		if err := pm.CheckPasswordStrength(enteredPassword); err != nil {
-			return fmt.Errorf("check password error: %w", err)
+			return failWithUI(err, "check password error")
 		}
 		password = enteredPassword
 	}
 
 	category, err := readLine(scanner, "Enter category: ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if category == "" {
-		return errors.New("field category cannot be empty")
+		return failWithUI(nil, "field category cannot be empty")
 	}
 
 	if err = pm.SavePassword(serviceName, password, category); err != nil {
-		return err
+		return failWithUI(err, "save password error")
 	}
 
 	showSuccess("Password saved successfully")
@@ -623,19 +639,21 @@ func HandlePasswordSearch(pm *PasswordManager) error {
 
 	serviceName, err := readLine(scanner, "Enter service name: ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if serviceName == "" {
-		return errors.New("service name cannot be empty")
+		return failWithUI(nil, "service name cannot be empty")
 	}
 
 	password, err := pm.GetPassword(serviceName)
 	if err != nil {
-		return err
+		return failWithUI(err, "search error")
 	}
 
 	fmt.Println()
 	ShowPasswordDetails(password)
+	showSuccess("Password found and displayed")
+
 	waitForEnter()
 
 	return nil
@@ -650,22 +668,22 @@ func HandlePasswordUpdate(pm *PasswordManager) error {
 
 	serviceName, err := readLine(scanner, "Enter service name: ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if serviceName == "" {
-		return errors.New("service name cannot be empty")
+		return failWithUI(nil, "service name cannot be empty")
 	}
 
 	newPassword, err := readLine(scanner, "Enter new password: ")
 	if err != nil {
-		return err
+		return failWithUI(err, "input error")
 	}
 	if newPassword == "" {
-		return errors.New("new password cannot be empty")
+		return failWithUI(nil, "new password cannot be empty")
 	}
 
 	if err = pm.UpdatePassword(serviceName, newPassword); err != nil {
-		return err
+		return failWithUI(err, "update password error")
 	}
 
 	showSuccess("Password updated successfully")
