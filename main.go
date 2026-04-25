@@ -693,6 +693,22 @@ func HandlePasswordUpdate(pm *PasswordManager) error {
 	return nil
 }
 
+func HandleExitAndSave(pm *PasswordManager) error {
+	clearScreen()
+
+	fmt.Println("=== Saving and Exiting ===")
+	fmt.Println("Saving changes...")
+
+	if err := pm.SaveToFile(); err != nil {
+
+		return failWithUI(err, "error saving data")
+	}
+
+	showSuccess("Changes saved successfully!")
+	showSuccess("Goodbye!")
+	return nil
+}
+
 func main() {
 	fmt.Println("Happy coding!!!")
 }
