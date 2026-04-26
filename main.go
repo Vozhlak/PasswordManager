@@ -752,6 +752,109 @@ func handleLoadError(err error) bool {
 	}
 }
 
+func HandleListPasswords(pm *PasswordManager) error {
+	clearScreen()
+	PrintPasswordList(pm.ListPasswords())
+
+	waitForEnter()
+	return nil
+}
+
+func HandleDeletePassword(pm *PasswordManager) error {
+	clearScreen()
+	fmt.Println("=== Delete Password ===")
+
+	name := ReadUserInput("Enter password name to delete")
+	if name == "" {
+		return failWithUI(nil, "password name cannot be empty")
+	}
+
+	if err := pm.DeletePassword(name); err != nil {
+		return failWithUI(err, "delete password error")
+	}
+
+	showSuccess("Password deleted successfully")
+	waitForEnter()
+	return nil
+}
+
+func HandleListCategories(pm *PasswordManager) error {
+	clearScreen()
+	fmt.Println("=== Categories ===")
+
+	categories := pm.ListCategories()
+
+	if len(categories) == 0 {
+		fmt.Println("ℹ️  No categories found yet.")
+	} else {
+		for _, c := range categories {
+			fmt.Printf("• %s\n", c)
+		}
+	}
+
+	waitForEnter()
+	return nil
+}
+
+func HandleShowStatistics(pm *PasswordManager) error {
+	clearScreen()
+	fmt.Println("=== Password Statistics ===")
+
+	stats := pm.GetPasswordStats()
+	total, _ := stats["total"].(int)
+
+	if total == 0 {
+		fmt.Println("ℹ️  No passwords saved yet. Statistics will appear here once you add some.")
+	} else {
+		fmt.Printf("%sTotal passwords:%s %d\n\n", colorGreen, colorReset, total)
+
+		if catMap, ok := stats["categoryCount"].(map[string]int); ok && len(catMap) > 0 {
+			fmt.Printf("%sPasswords by category:%s\n", colorYellow, colorReset)
+
+			var categories []string
+			for cat := range catMap {
+				categories = append(categories, cat)
+			}
+			sort.Strings(categories)
+
+			for _, cat := range categories {
+				count := catMap[cat]
+				fmt.Printf("  • %-15s %d\n", cat, count)
+			}
+			fmt.Println()
+		}
+
+		oldest, _ := stats["oldest"].(time.Time)
+		newest, _ := stats["newest"].(time.Time)
+
+		if !oldest.IsZero() || !newest.IsZero() {
+			fmt.Printf("%sActivity timeline:%s\n", colorYellow, colorReset)
+			fmt.Printf("  First added:  %s\n", oldest.Format(time.DateTime))
+			fmt.Printf("  Last added:   %s\n", newest.Format(time.DateTime))
+		}
+	}
+
+	waitForEnter()
+	return nil
+}
+
+func HandleFindDuplicates(pm *PasswordManager) error {
+	clearScreen()
+	fmt.Println("=== Duplicate passwords ===")
+	duplicates := pm.FindDuplicatePasswords()
+
+	if len(duplicates) == 0 {
+		fmt.Println("No duplicate passwords found")
+	} else {
+		for pwd, services := range duplicates {
+			fmt.Printf("Password '%s' used in: %v\n", pwd, services)
+		}
+	}
+
+	waitForEnter()
+	return nil
+}
+
 func main() {
 	fmt.Println("=== Password Manager Initialization ===")
 	masterPassword, err := readPassword()
@@ -792,81 +895,17 @@ func main() {
 		case "3":
 			err = HandlePasswordSearch(pm)
 		case "4":
-			clearScreen()
-			PrintPasswordList(pm.ListPasswords())
-			waitForEnter()
+			err = HandleListPasswords(pm)
 		case "5":
 			err = HandlePasswordUpdate(pm)
 		case "6":
-			name := ReadUserInput("Enter password name to delete")
-			if name != "" {
-				if err = pm.DeletePassword(name); err != nil {
-					_ = failWithUI(err, "delete password error")
-				} else {
-					showSuccess("Password deleted successfully")
-					waitForEnter()
-				}
-			}
+			err = HandleDeletePassword(pm)
 		case "7":
-			categories := pm.ListCategories()
-			clearScreen()
-
-			fmt.Println("=== Categories ===")
-			for _, c := range categories {
-				fmt.Printf("• %s\n", c)
-			}
-			waitForEnter()
+			err = HandleListCategories(pm)
 		case "8":
-			clearScreen()
-			fmt.Println("=== Password Statistics ===")
-
-			stats := pm.GetPasswordStats()
-			total, _ := stats["total"].(int)
-
-			if total == 0 {
-				fmt.Println("ℹ️  No passwords saved yet. Statistics will appear here once you add some.")
-			} else {
-				fmt.Printf("%sTotal passwords:%s %d\n\n", colorGreen, colorReset, total)
-
-				if catMap, ok := stats["categoryCount"].(map[string]int); ok && len(catMap) > 0 {
-					fmt.Printf("%sPasswords by category:%s\n", colorYellow, colorReset)
-
-					var categories []string
-					for cat := range catMap {
-						categories = append(categories, cat)
-					}
-					sort.Strings(categories)
-
-					for _, cat := range categories {
-						count := catMap[cat]
-						fmt.Printf("  • %-15s %d\n", cat, count)
-					}
-					fmt.Println()
-				}
-
-				oldest, _ := stats["oldest"].(time.Time)
-				newest, _ := stats["newest"].(time.Time)
-
-				if !oldest.IsZero() || !newest.IsZero() {
-					fmt.Printf("%sActivity timeline:%s\n", colorYellow, colorReset)
-					fmt.Printf("  First added:  %s\n", oldest.Format(time.DateTime))
-					fmt.Printf("  Last added:   %s\n", newest.Format(time.DateTime))
-				}
-			}
-
-			waitForEnter()
+			err = HandleShowStatistics(pm)
 		case "9":
-			duplicates := pm.FindDuplicatePasswords()
-			clearScreen()
-			if len(duplicates) == 0 {
-				fmt.Println("No duplicate passwords found")
-			} else {
-				fmt.Println("=== Duplicate passwords ===")
-				for pwd, services := range duplicates {
-					fmt.Printf("Password '%s' used in: %v\n", pwd, services)
-				}
-			}
-			waitForEnter()
+			err = HandleFindDuplicates(pm)
 		case "0":
 			if err = HandleExitAndSave(pm); err != nil {
 				showError(fmt.Sprintf("Failed to save: %v", err))
