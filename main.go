@@ -427,7 +427,7 @@ func waitForEnter() {
 
 	_, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
-		fmt.Printf("failed to read input: %w", err)
+		fmt.Printf("failed to read input: %v", err)
 		return
 	}
 }
