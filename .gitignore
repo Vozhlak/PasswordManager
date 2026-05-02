@@ -1,3 +1,41 @@
-.idea/
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+pm
+main
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+*.html
+
+# Dependency directories (if using vendoring)
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE/Editor files
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# 🔒 Project-specific sensitive data (encrypted password files)
+passwords.dat
+test_passwords.dat
+*.dat
+
+# Build artifacts
+/build
